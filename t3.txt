@@ -1,0 +1,30 @@
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
+#include <process.h>
+#include <pthread.h>
+#include <inttypes.h>
+#include <sys/neutrino.h>
+
+int main(int argc, char *argv[]) {
+    pid_t P2ProcessId;
+    int P1ChannelId, P2ChannelId, P3ChannelId;
+    sscanf(argv[1], "%d", &P2ProcessId);
+    sscanf(argv[2], "%d", &P2ChannelId);
+    P3ChannelId = ChannelCreate(0);
+    int ConnectionIdP2 = ConnectAttach(0, P2ProcessId, P2ChannelId, 0, 0);
+    char Reply[512], Message[512];
+    strcpy(Message, "P3 initializated");
+    MsgSend(ConnectionIdP2, &Message, sizeof(Message), &Reply, sizeof(Reply)); // send "P3 initializated" to P2
+
+    MsgSend(ConnectionIdP2, &P3ChannelId, sizeof(P3ChannelId), &Reply, sizeof(Reply)); // send P3 channel id to P2
+
+    P1ChannelId = MsgReceive(P3ChannelId, &Reply, sizeof(Reply), NULL); // receive "stop" from P1
+    MsgReply(P1ChannelId, EOK, NULL, 0);
+
+    strcpy(Message, "stop");
+    MsgSend(ConnectionIdP2, &Message, sizeof(Message), &Reply, sizeof(Reply)); // send "stop" to P2
+
+    return 0;
+}
+

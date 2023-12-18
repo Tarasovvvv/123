@@ -1,0 +1,41 @@
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
+#include <process.h>
+#include <pthread.h>
+#include <inttypes.h>
+#include <sys/neutrino.h>
+
+int main() {
+    pid_t P1ProcessId, P3ProcessId;
+    int P1ChannelId, P2ChannelId, P3ChannelId;
+    int ConnectionIdP3;
+    char Reply[512], Message[512], cP1ProccesId[12], cP1ChannelId[12];
+    P1ChannelId = ChannelCreate(0);
+    P1ProcessId = getpid();
+    sprintf(cP1ChannelId, "%d", P1ChannelId);
+    sprintf(cP1ProccesId, "%d", P1ProcessId);
+
+    spawnl(P_NOWAIT, "/tmp/Module2", "/tmp/Module2", cP1ProccesId, cP1ChannelId, NULL);
+    P2ChannelId = MsgReceive(P1ChannelId, &P3ProcessId, sizeof(P3ProcessId), NULL); // receive P3 process id from P2
+    MsgReply(P2ChannelId, EOK, NULL, 0);
+    printf("%d\n", &P3ProcessId);
+
+    MsgReceive(P1ChannelId, &Reply, sizeof(Reply), NULL); // receive "P3 initializated" from P2
+    MsgReply(P2ChannelId, EOK, NULL, 0);
+    printf("%s\n", &Reply);
+
+    MsgReceive(P1ChannelId, &P3ChannelId, sizeof(P3ChannelId), NULL);  // receive P3 channel id from P2
+    MsgReply(P2ChannelId, EOK, NULL, 0);
+    ConnectionIdP3 = ConnectAttach(0, P3ProcessId, P3ChannelId, 0, 0);
+
+    strcpy(Message, "stop");
+    MsgSend(ConnectionIdP3, &Message, sizeof(Message), &Reply, sizeof(Reply)); // send "stop" to P3
+
+    MsgReceive(P1ChannelId, &Reply, sizeof(Reply), NULL); // receive "stop" from P2
+    MsgReply(P2ChannelId, EOK, NULL, 0);
+    printf("stop P1\n");
+
+    return 0;
+}
+
